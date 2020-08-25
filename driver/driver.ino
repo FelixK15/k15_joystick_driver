@@ -36,6 +36,11 @@
 #define K15_JOYSTICK_BUTTON_P2_PIN      18
 #define K15_JOYSTICK_BUTTON_COIN_PIN    10
 
+#define K15_JOYSTICK_MIN_AXIS_VALUE     130
+#define K15_JOYSTICK_MAX_AXIS_VALUE     600
+
+#define K15_JOYSTICK_AXIS_DEADZONE      40
+
 typedef struct
 {
   uint8_t             bitMask;
@@ -122,47 +127,47 @@ void setup()
 
   // put your setup code here, to run once:
 #if K15_JOYSTICK_USE_X_AXIS
-  joystick.pHID->setXAxisRange(0, 1024);
+  joystick.pHID->setXAxisRange(K15_JOYSTICK_MIN_AXIS_VALUE, K15_JOYSTICK_MAX_AXIS_VALUE);
 #endif
 
 #if K15_JOYSTICK_USE_Y_AXIS
-  joystick.pHID->setYAxisRange(0, 1024);
+  joystick.pHID->setYAxisRange(K15_JOYSTICK_MIN_AXIS_VALUE, K15_JOYSTICK_MAX_AXIS_VALUE);
 #endif
 
 #if K15_JOYSTICK_USE_Z_AXIS
-  joystick.pHID->setZAxisRange(0, 1024);
+  joystick.pHID->setZAxisRange(K15_JOYSTICK_MIN_AXIS_VALUE, K15_JOYSTICK_MAX_AXIS_VALUE24);
 #endif
 
 #if K15_JOYSTICK_USE_RX_AXIS
-  joystick.pHID->setRxAxisRange(0, 1024);
+  joystick.pHID->setRxAxisRange(K15_JOYSTICK_MIN_AXIS_VALUE, K15_JOYSTICK_MAX_AXIS_VALUE);
 #endif
 
 #if K15_JOYSTICK_USE_RY_AXIS
-  joystick.pHID->setRyAxisRange(0, 1024);
+  joystick.pHID->setRyAxisRange(K15_JOYSTICK_MIN_AXIS_VALUE, K15_JOYSTICK_MAX_AXIS_VALUE);
 #endif
 
 #if K15_JOYSTICK_USE_RZ_AXIS
-  joystick.pHID->setRzAxisRange(0, 1024);
+  joystick.pHID->setRzAxisRange(K15_JOYSTICK_MIN_AXIS_VALUE, K15_JOYSTICK_MAX_AXIS_VALUE);
 #endif
 
 #if K15_JOYSTICK_USE_RUDDER
-  joystick.pHID->setRudderRange(0, 1024);
+  joystick.pHID->setRudderRange(K15_JOYSTICK_MIN_AXIS_VALUE, K15_JOYSTICK_MAX_AXIS_VALUE);
 #endif
 
 #if K15_JOYSTICK_USE_THROTTLE
-  joystick.pHID->setThrottleRange(0, 1024);
+  joystick.pHID->setThrottleRange(K15_JOYSTICK_MIN_AXIS_VALUE, K15_JOYSTICK_MAX_AXIS_VALUE);
 #endif
 
 #if K15_JOYSTICK_USE_ACCELERATOR
-  joystick.pHID->setAcceleratorRange(0, 1024);
+  joystick.pHID->setAcceleratorRange(K15_JOYSTICK_MIN_AXIS_VALUE, K15_JOYSTICK_MAX_AXIS_VALUE);
 #endif
 
 #if K15_JOYSTICK_USE_BREAK
-  joystick.pHID->setBrakeRange(0, 1024);
+  joystick.pHID->setBrakeRange(K15_JOYSTICK_MIN_AXIS_VALUE, K15_JOYSTICK_MAX_AXIS_VALUE);
 #endif
 
 #if K15_JOYSTICK_USE_STEERING
-  joystick.pHID->setSteeringRange(0, 1024);
+  joystick.pHID->setSteeringRange(K15_JOYSTICK_MIN_AXIS_VALUE, K15_JOYSTICK_MAX_AXIS_VALUE);
 #endif
 
   joystick.pHID->begin();
@@ -176,16 +181,19 @@ void loop()
   }
   else
   {
-  #if K15_JOYSTICK_USE_X_AXIS
-    const int16_t xAxisValue = analogRead(K15_JOYSTICK_X_AXIS_PIN);
-    joystick.pHID->setXAxis(xAxisValue);
-  #endif
+    static const int16_t center = ( K15_JOYSTICK_MIN_AXIS_VALUE + K15_JOYSTICK_MAX_AXIS_VALUE ) / 2;
+    static const int16_t joystickDeadzoneDistance = K15_JOYSTICK_AXIS_DEADZONE * K15_JOYSTICK_AXIS_DEADZONE;
+    
+    const int16_t xAxisValue = abs(analogRead(K15_JOYSTICK_X_AXIS_PIN) - center);
+    const int16_t yAxisValue = abs(analogRead(K15_JOYSTICK_Y_AXIS_PIN) - center);
 
-  #if K15_JOYSTICK_USE_Y_AXIS
-    const int16_t yAxisValue = analogRead(K15_JOYSTICK_Y_AXIS_PIN);
-    joystick.pHID->setYAxis(yAxisValue);
-  #endif
-
+    const int16_t distance = xAxisValue * xAxisValue + yAxisValue * yAxisValue;
+    if (distance > s_joystickDeadzoneDistance)
+    {
+      joystick.pHID->setXAxis(xAxisValue);
+      joystick.pHID->setYAxis(yAxisValue);
+    }
+    
     for(uint8_t buttonIndex = 0u; buttonIndex < K15_JOYSTICK_BUTTON_COUNT; ++buttonIndex)
     {
         const uint8_t value = (*joystick.buttons[buttonIndex].pRegister & joystick.buttons[buttonIndex].bitMask) > 0u ? 1u : 0u;
